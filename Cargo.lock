@@ -1753,7 +1753,7 @@ dependencies = [
 [[package]]
 name = "nmea"
 version = "0.7.0"
-source = "git+https://github.com/herostrat/nmea0183-rs#00d959eda858701fd548cff09d44cec2329f4945"
+source = "git+https://github.com/dpmcgarry/nmea0183-rs?rev=00d959eda858701fd548cff09d44cec2329f4945#00d959eda858701fd548cff09d44cec2329f4945"
 dependencies = [
  "arrayvec",
  "cfg-if",
@@ -1802,7 +1802,7 @@ dependencies = [
 [[package]]
 name = "nmea2000"
 version = "0.1.0"
-source = "git+https://github.com/herostrat/nmea2000-rs#7b7b82dd7768670715eb400cb54abbc4326ae245"
+source = "git+https://github.com/dpmcgarry/nmea2000-rs?rev=7b7b82dd7768670715eb400cb54abbc4326ae245#7b7b82dd7768670715eb400cb54abbc4326ae245"
 dependencies = [
  "nmea2000-pgns",
  "nmea2000-types",
@@ -1813,7 +1813,7 @@ dependencies = [
 [[package]]
 name = "nmea2000-codegen"
 version = "0.1.0"
-source = "git+https://github.com/herostrat/nmea2000-rs#7b7b82dd7768670715eb400cb54abbc4326ae245"
+source = "git+https://github.com/dpmcgarry/nmea2000-rs?rev=7b7b82dd7768670715eb400cb54abbc4326ae245#7b7b82dd7768670715eb400cb54abbc4326ae245"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -1825,7 +1825,7 @@ dependencies = [
 [[package]]
 name = "nmea2000-pgns"
 version = "0.1.0"
-source = "git+https://github.com/herostrat/nmea2000-rs#7b7b82dd7768670715eb400cb54abbc4326ae245"
+source = "git+https://github.com/dpmcgarry/nmea2000-rs?rev=7b7b82dd7768670715eb400cb54abbc4326ae245#7b7b82dd7768670715eb400cb54abbc4326ae245"
 dependencies = [
  "nmea2000-codegen",
  "nmea2000-types",
@@ -1868,7 +1868,7 @@ dependencies = [
 [[package]]
 name = "nmea2000-types"
 version = "0.1.0"
-source = "git+https://github.com/herostrat/nmea2000-rs#7b7b82dd7768670715eb400cb54abbc4326ae245"
+source = "git+https://github.com/dpmcgarry/nmea2000-rs?rev=7b7b82dd7768670715eb400cb54abbc4326ae245#7b7b82dd7768670715eb400cb54abbc4326ae245"
 
 [[package]]
 name = "nom"
