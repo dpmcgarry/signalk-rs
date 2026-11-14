@@ -122,7 +122,7 @@ pub fn test_app_with_handler(handler_path: &str, plugin_id: &str, bridge_socket:
         test_conn,
         &signalk_server::config::SeedConfig::default(),
     ));
-    let (store, _rx) = SignalKStore::new(&config_store.vessel_uuid());
+    let (store, _rx) = SignalKStore::new(config_store.vessel_uuid());
     let put_handlers = Arc::new(RwLock::new(HashMap::from([(
         handler_path.to_string(),
         plugin_id.to_string(),

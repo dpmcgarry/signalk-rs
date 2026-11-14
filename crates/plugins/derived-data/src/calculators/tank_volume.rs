@@ -23,7 +23,7 @@ impl Calculator for TankVolume {
         let mut results = Vec::new();
 
         // Find all capacity paths to discover instances
-        for (path, _) in values.iter() {
+        for path in values.keys() {
             let Some(prefix) = path.strip_suffix(".capacity") else {
                 continue;
             };

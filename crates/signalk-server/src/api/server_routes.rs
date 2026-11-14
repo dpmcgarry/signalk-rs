@@ -106,11 +106,7 @@ pub async fn put_source_priorities(
     state.config_store.set_source_priorities(priorities.clone());
 
     // Apply to the live store immediately
-    state
-        .store
-        .write()
-        .await
-        .set_source_priorities(priorities);
+    state.store.write().await.set_source_priorities(priorities);
 
     StatusCode::NO_CONTENT.into_response()
 }
