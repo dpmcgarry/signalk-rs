@@ -52,9 +52,6 @@ chrono = { version = "0.4", features = ["serde"] }
 # JWT
 jsonwebtoken = { version = "9" }
 
-# TLS
-rustls = { version = "0.23" }
-
 # Logging / Tracing
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
@@ -102,7 +99,6 @@ autopilot = { path = "crates/plugins/autopilot" }
 nmea2000-receive = { path = "crates/plugins/nmea2000-receive" }
 nmea0183-send = { path = "crates/plugins/nmea0183-send" }
 nmea2000-send = { path = "crates/plugins/nmea2000-send" }
-signalk-plugin-client = { path = "crates/signalk-plugin-client" }
 signalk-sqlite = { path = "crates/signalk-sqlite" }
 
 # Testing & Benchmarking (dev only)
