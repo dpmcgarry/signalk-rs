@@ -96,9 +96,7 @@ impl PluginRegistry {
             Some(Utc::now())
         } else {
             // Preserve existing error timestamp when transitioning away from error
-            self.plugins
-                .get(id)
-                .and_then(|p| p.last_error_time)
+            self.plugins.get(id).and_then(|p| p.last_error_time)
         };
         self.plugins.insert(
             id.to_string(),

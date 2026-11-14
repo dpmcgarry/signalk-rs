@@ -42,10 +42,7 @@ impl DeltaFilterChain {
         let handlers = self.handlers.read().unwrap();
         let mut current = delta;
         for (_, handler) in handlers.iter() {
-            match handler(current) {
-                Some(d) => current = d,
-                None => return None,
-            }
+            current = handler(current)?;
         }
         Some(current)
     }

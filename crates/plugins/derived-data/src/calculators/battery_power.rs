@@ -21,7 +21,7 @@ impl Calculator for BatteryPower {
         let mut results = Vec::new();
 
         // Discover battery instances by scanning for voltage paths
-        for (path, _) in values.iter() {
+        for path in values.keys() {
             let Some(prefix) = path.strip_suffix(".voltage") else {
                 continue;
             };

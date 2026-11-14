@@ -38,10 +38,7 @@ pub struct ConfigStore {
 
 impl ConfigStore {
     /// Create a new ConfigStore. If the DB config table is empty, seed from SeedConfig.
-    pub fn new(
-        db: Arc<std::sync::Mutex<Connection>>,
-        config: &crate::config::SeedConfig,
-    ) -> Self {
+    pub fn new(db: Arc<std::sync::Mutex<Connection>>, config: &crate::config::SeedConfig) -> Self {
         let conn = db.lock().unwrap();
 
         let count: i64 = conn
@@ -65,7 +62,12 @@ impl ConfigStore {
     /// Seed initial config values from the SeedConfig.
     fn seed_from_config(conn: &Connection, config: &crate::config::SeedConfig) {
         // Vessel
-        Self::upsert(conn, "server", "vessel_uuid", &json_str(&config.vessel.uuid));
+        Self::upsert(
+            conn,
+            "server",
+            "vessel_uuid",
+            &json_str(&config.vessel.uuid),
+        );
         if let Some(ref name) = config.vessel.name {
             Self::upsert(conn, "server", "vessel_name", &json_str(name));
         }
@@ -177,8 +179,7 @@ impl ConfigStore {
 
         // Ensure we always have a UUID
         if cache.vessel_uuid.is_empty() {
-            cache.vessel_uuid =
-                format!("urn:mrn:signalk:uuid:{}", uuid::Uuid::new_v4());
+            cache.vessel_uuid = format!("urn:mrn:signalk:uuid:{}", uuid::Uuid::new_v4());
         }
 
         cache
@@ -216,11 +217,7 @@ impl ConfigStore {
 
     // ── Setters (sync, DB write + cache update) ───────────────────────────
 
-    pub fn set_vessel(
-        &self,
-        name: Option<String>,
-        mmsi: Option<String>,
-    ) {
+    pub fn set_vessel(&self, name: Option<String>, mmsi: Option<String>) {
         let conn = self.db.lock().unwrap();
         match &name {
             Some(n) => Self::upsert(&conn, "server", "vessel_name", &json_str(n)),
@@ -426,7 +423,7 @@ mod tests {
 
         let prios = store.source_priorities();
         assert_eq!(prios.get("ais"), Some(&50));
-        assert!(prios.get("gps.GP").is_none());
+        assert!(!prios.contains_key("gps.GP"));
     }
 
     #[test]
@@ -440,7 +437,7 @@ mod tests {
 
         let ttls = store.source_ttls();
         assert_eq!(ttls.get("test.src"), Some(&10));
-        assert!(ttls.get("nmea0183-tcp.GP").is_none());
+        assert!(!ttls.contains_key("nmea0183-tcp.GP"));
     }
 
     #[test]
