@@ -73,15 +73,15 @@ async-trait = { version = "0.1" }
 uuid = { version = "1", features = ["v4", "serde"] }
 
 # NMEA parsing
-nmea = { git = "https://github.com/herostrat/nmea0183-rs", features = ["sensor", "safety", "navigation"] }
+nmea = { git = "https://github.com/dpmcgarry/nmea0183-rs", rev = "00d959eda858701fd548cff09d44cec2329f4945", features = ["sensor", "safety", "navigation"] }
 
 # AIS decoding
 ais = { version = "0.12" }
 
 # NMEA 2000
-nmea2000 = { git = "https://github.com/herostrat/nmea2000-rs", features = ["slcan", "actisense"] }
-nmea2000-pgns = { git = "https://github.com/herostrat/nmea2000-rs" }
-nmea2000-types = { git = "https://github.com/herostrat/nmea2000-rs" }
+nmea2000 = { git = "https://github.com/dpmcgarry/nmea2000-rs", rev = "7b7b82dd7768670715eb400cb54abbc4326ae245", features = ["slcan", "actisense"] }
+nmea2000-pgns = { git = "https://github.com/dpmcgarry/nmea2000-rs", rev = "7b7b82dd7768670715eb400cb54abbc4326ae245" }
+nmea2000-types = { git = "https://github.com/dpmcgarry/nmea2000-rs", rev = "7b7b82dd7768670715eb400cb54abbc4326ae245" }
 
 # Serial port (async, for NMEA 0183 via serial)
 tokio-serial = { version = "5.4" }
