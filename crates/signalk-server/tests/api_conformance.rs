@@ -254,9 +254,49 @@ async fn login_response_has_time_to_live() {
 // ─── JSON Schema conformance ─────────────────────────────────────────────────
 
 #[test]
+fn every_vendored_schema_compiles() {
+    // Guards against a partial schema tree: every file must compile with all
+    // of its `$ref`s resolved from tests/schemas/.
+    let root = helpers::schema_root();
+    let mut names = Vec::new();
+    let mut dirs = vec![root.clone()];
+    while let Some(dir) = dirs.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                dirs.push(path);
+            } else if path.extension().is_some_and(|e| e == "json") {
+                let rel = path.strip_prefix(&root).unwrap().with_extension("");
+                names.push(rel.to_string_lossy().into_owned());
+            }
+        }
+    }
+    assert!(
+        names.len() >= 30,
+        "expected the full schema tree, found {names:?}"
+    );
+    for name in &names {
+        helpers::compile_schema(name);
+    }
+}
+
+#[test]
+fn delta_schema_rejects_invalid_delta() {
+    // Proves validation actually runs: a delta whose `updates` is not an array
+    // and whose value lacks `path` must be rejected.
+    let bad = json!({
+        "context": "vessels.urn:mrn:signalk:uuid:test",
+        "updates": { "values": [{ "value": 3.85 }] }
+    });
+    assert!(
+        !helpers::schema_errors("delta", &bad).is_empty(),
+        "invalid delta passed schema validation"
+    );
+}
+
+#[test]
 fn delta_schema_validates_sample_delta() {
     // Validate a known-good delta against the spec schema.
-    // Plain #[test] (not async) to avoid tokio runtime conflicts with jsonschema.
     let delta = json!({
         "context": "vessels.urn:mrn:signalk:uuid:test",
         "updates": [{
@@ -273,13 +313,7 @@ fn delta_schema_validates_sample_delta() {
 #[tokio::test]
 async fn signalk_schema_validates_full_model_response() {
     let (_, body) = get(test_app(), "/signalk/v1/api").await;
-    // Run schema validation on a plain OS thread — jsonschema may create its own
-    // runtime internally which would panic if called from within tokio's executor.
-    std::thread::spawn(move || {
-        assert_valid_schema("signalk", &body);
-    })
-    .join()
-    .unwrap();
+    assert_valid_schema("signalk", &body);
 }
 
 // ─── HTTP method conformance ──────────────────────────────────────────────────
