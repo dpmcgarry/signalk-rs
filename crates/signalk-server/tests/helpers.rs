@@ -227,84 +227,88 @@ async fn response_json(response: Response) -> (u16, serde_json::Value) {
     (status, json)
 }
 
-/// Load a SignalK JSON schema from the embedded test schemas directory.
-/// Returns `None` if the schema file is not found.
-pub fn load_schema(name: &str) -> Option<serde_json::Value> {
-    // Walk up from the crate dir to find the workspace tests/schemas/ directory
-    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let schema_path = manifest_dir
-        .parent() // crates/
-        .and_then(|p| p.parent()) // workspace root
-        .map(|root| {
-            root.join("tests")
-                .join("schemas")
-                .join(format!("{}.json", name))
-        })?;
+/// Root of the vendored SignalK schema tree (`<workspace>/tests/schemas/`).
+///
+/// Populated by `scripts/update-schemas.sh`; the version is in `.schema-version`.
+pub fn schema_root() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/schemas")
+        .canonicalize()
+        .expect("tests/schemas/ not found — run scripts/update-schemas.sh")
+}
 
-    let content = std::fs::read_to_string(schema_path).ok()?;
-    serde_json::from_str(&content).ok()
+/// Load a SignalK JSON schema by its path relative to `tests/schemas/`,
+/// without the `.json` suffix (e.g. `"delta"`, `"messages/put"`).
+///
+/// Panics if the file is missing or is not valid JSON.
+pub fn load_schema(name: &str) -> serde_json::Value {
+    let path = schema_root().join(format!("{name}.json"));
+    let content = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("schema '{name}' not found at {}: {e}", path.display()));
+    serde_json::from_str(&content)
+        .unwrap_or_else(|e| panic!("schema '{name}' is not valid JSON: {e}"))
+}
+
+/// Resolves every `$ref` from the vendored schema tree. Never touches the
+/// network: an unknown URI is an error, so a missing file fails the test.
+struct LocalSchemaRetriever {
+    root: std::path::PathBuf,
+}
+
+impl jsonschema::Retrieve for LocalSchemaRetriever {
+    fn retrieve(
+        &self,
+        uri: &jsonschema::Uri<String>,
+    ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
+        let uri = uri.as_str();
+        let uri = uri.split('#').next().unwrap_or(uri);
+        // SignalK ids look like https://signalk.org/specification/<ver>/schemas/<rel>.
+        // The version in the id lags the release, so match on `/schemas/` only.
+        // GeoJSON schemas keep their upstream json-schema.org ids.
+        let rel = if let Some(i) = uri.rfind("/schemas/") {
+            uri[i + "/schemas/".len()..].to_string()
+        } else if let Some(r) = uri.strip_prefix("http://json-schema.org/geojson/") {
+            format!("external/geojson/{r}")
+        } else {
+            return Err(format!("refusing to fetch non-local schema: {uri}").into());
+        };
+        let path = self.root.join(&rel);
+        let content = std::fs::read_to_string(&path)
+            .map_err(|e| format!("schema {uri} -> {}: {e}", path.display()))?;
+        Ok(serde_json::from_str(&content)?)
+    }
+}
+
+/// Compile a named SignalK schema with all references resolved locally.
+/// Panics if it does not compile.
+pub fn compile_schema(name: &str) -> jsonschema::Validator {
+    let schema = load_schema(name);
+    jsonschema::options()
+        .with_retriever(LocalSchemaRetriever {
+            root: schema_root(),
+        })
+        .build(&schema)
+        .unwrap_or_else(|e| panic!("schema '{name}' failed to compile: {e}"))
+}
+
+/// Validate a value against a named SignalK schema and return one line per
+/// error (empty when valid).
+pub fn schema_errors(name: &str, value: &serde_json::Value) -> Vec<String> {
+    compile_schema(name)
+        .iter_errors(value)
+        .map(|e| format!("{e} (at {})", e.instance_path))
+        .collect()
 }
 
 /// Assert that a JSON value conforms to a named SignalK schema.
-/// Panics with a descriptive message if validation fails.
-///
-/// NOTE: Must be called from a non-async context (plain `#[test]`) or from a
-/// thread spawned with `std::thread::spawn` to avoid tokio runtime conflicts.
+/// Panics with every validation error if it does not, and also if the schema
+/// is missing or does not compile — validation is never silently skipped.
 pub fn assert_valid_schema(name: &str, value: &serde_json::Value) {
-    let schema = match load_schema(name) {
-        Some(s) => s,
-        None => {
-            eprintln!(
-                "[schema] Warning: schema '{}' not found, skipping validation",
-                name
-            );
-            return;
-        }
-    };
-
-    // Pre-register all local schemas by their declared `id` URI so that
-    // cross-references between SignalK schemas are resolved from disk instead
-    // of triggering network requests (which panic inside a tokio executor).
-    let mut opts = jsonschema::options();
-    for &sname in &["delta", "signalk", "vessel", "definitions"] {
-        let Some(s) = load_schema(sname) else {
-            continue;
-        };
-        // Extract and own the URI string before `s` is moved into from_contents.
-        let Some(uri) = s
-            .get("id")
-            .and_then(|v| v.as_str())
-            .map(|id| id.trim_end_matches('#').to_string())
-        else {
-            continue;
-        };
-        let Ok(resource) = jsonschema::Resource::from_contents(s) else {
-            continue;
-        };
-        opts = opts.with_resource(&uri, resource);
-    }
-
-    let compiled = match opts.build(&schema) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!(
-                "[schema] Warning: could not compile schema '{}': {} — skipping validation",
-                name, e
-            );
-            return;
-        }
-    };
-
-    let errors: Vec<_> = compiled.iter_errors(value).collect();
+    let errors = schema_errors(name, value);
     if !errors.is_empty() {
-        let messages: Vec<String> = errors
-            .iter()
-            .map(|e| format!("  - {} (path: {})", e, e.instance_path))
-            .collect();
         panic!(
-            "JSON Schema '{}' validation failed:\n{}\n\nValue:\n{}",
-            name,
-            messages.join("\n"),
+            "JSON Schema '{name}' validation failed:\n  - {}\n\nValue:\n{}",
+            errors.join("\n  - "),
             serde_json::to_string_pretty(value).unwrap()
         );
     }
