@@ -89,7 +89,9 @@ jobs:
   # ── Smoke: full-stack end-to-end (Docker Compose) ───────────────────────────
   smoke:
     name: Smoke · end-to-end
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest (26.04) azure kernels ship no linux-modules-extra,
+    # so vcan can't be loaded there.
+    runs-on: ubuntu-24.04
     needs: [test]
     steps:
       - uses: actions/checkout@v4
@@ -105,9 +107,11 @@ jobs:
 
       - name: Install kernel extras and load vcan module
         run: |
-          sudo apt-get update
-          sudo apt-get install -y linux-modules-extra-$(uname -r)
-          sudo modprobe vcan
+          if ! sudo modprobe vcan 2>/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y linux-modules-extra-$(uname -r)
+            sudo modprobe vcan
+          fi
 
       - name: Run smoke tests
         run: |
